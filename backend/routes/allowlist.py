@@ -3,8 +3,8 @@
 The backend exposes management/admin endpoints consumed by the UI: keys, users,
 teams, orgs, customers, budgets, tags, workflows, model management, spend &
 analytics, settings (router/cache/cost-tracking/fallbacks), SSO/onboarding,
-audit logs, debug, enterprise admin, and UI bootstrap helpers (logo, favicon,
-.well-known config).
+audit logs, debug, and UI bootstrap helpers (logo, favicon, .well-known
+config).
 
 Anything LLM data-plane is dropped — those run on the gateway component.
 """
@@ -90,8 +90,6 @@ BACKEND_PATH_PREFIXES: tuple[str, ...] = (
     "/add/allowed_ip",
     "/delete/allowed_ip",
     "/get/",
-    # Enterprise admin
-    "/enterprise/",
     # Debug / config / profiling
     "/debug/",
     "/config/",

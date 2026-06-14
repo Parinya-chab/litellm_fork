@@ -1026,7 +1026,6 @@ async def new_team(  # noqa: PLR0915
             get_audit_log_changed_by,
         )
         from litellm.proxy.proxy_server import (
-            _license_check,
             create_audit_log_for_update,
             litellm_proxy_admin_name,
             prisma_client,
@@ -1075,16 +1074,6 @@ async def new_team(  # noqa: PLR0915
                             "error": f"soft_budget ({data.soft_budget}) must be strictly lower than max_budget ({data.max_budget})"
                         },
                     )
-
-        # Check if license is over limit
-        total_teams = await TeamRepository(prisma_client).table.count()
-        if total_teams and _license_check.is_team_count_over_limit(
-            team_count=total_teams
-        ):
-            raise HTTPException(
-                status_code=403,
-                detail="License is over limit. Please contact support@berri.ai to upgrade your license.",
-            )
 
         if data.team_id is None:
             data.team_id = str(uuid.uuid4())
@@ -2914,10 +2903,9 @@ async def team_member_update(
         raise HTTPException(status_code=400, detail={"error": "No team id passed in"})
 
     if data.role == "admin" and not premium_user:
-        # exactly the same text your proxy throws for add:
         raise HTTPException(
             status_code=400,
-            detail="Assigning team admins is a premium feature. You must be a LiteLLM Enterprise user to use this feature. If you have a license please set `LITELLM_LICENSE` in your env. Get a 7 day trial key here: https://www.litellm.ai/#trial. Pricing: https://www.litellm.ai/#pricing",
+            detail={"error": CommonProxyErrors.not_premium_user.value},
         )
     if data.user_id is None and data.user_email is None:
         raise HTTPException(

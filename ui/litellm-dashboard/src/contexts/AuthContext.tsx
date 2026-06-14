@@ -83,6 +83,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Decode JWT and populate derived auth state whenever the token changes.
   useEffect(() => {
     if (!token) {
+      setAccessToken(null);
+      setUserID(null);
+      setUserRole("");
+      setUserEmail(null);
+      setPremiumUser(false);
+      setDisabledPersonalKeyCreation(false);
+      setShowSSOBanner(true);
       return;
     }
 
@@ -105,6 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setAccessToken(decoded.key);
     setDisabledPersonalKeyCreation(decoded.disabled_non_admin_personal_key_creation);
+    setPremiumUser(false);
 
     if (decoded.user_role) {
       setUserRole(formatUserRole(decoded.user_role));
@@ -114,9 +122,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     if (decoded.login_method) {
       setShowSSOBanner(decoded.login_method === "username_password");
-    }
-    if (decoded.premium_user) {
-      setPremiumUser(decoded.premium_user);
     }
     if (decoded.auth_header_name) {
       setGlobalLitellmHeaderName(decoded.auth_header_name);

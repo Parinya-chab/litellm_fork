@@ -136,13 +136,9 @@ commands:
   setup_litellm_enterprise_pip:
     steps:
       - run:
-          name: "Install local version of litellm-enterprise"
+          name: "Skip litellm-enterprise setup"
           command: |
-            # litellm-enterprise is a uv workspace member and is already installed
-            # by the main `uv sync --all-groups --all-extras`.  Do NOT run
-            # `uv sync --package litellm-enterprise` here — that overwrites the
-            # shared .venv and strips out dev/test deps (pytest, prisma, etc.).
-            uv run --no-sync python -c "import litellm_enterprise; print('litellm-enterprise OK:', litellm_enterprise.__file__)"
+            echo "Skipping enterprise dependency setup in OSS-only fork"
   setup_litellm_test_deps:
     steps:
       - checkout
@@ -1079,16 +1075,7 @@ jobs:
       - run:
           name: Run enterprise tests
           command: |
-            uv run --no-sync python -m prisma generate
-            mkdir -p test-results
-            TEST_FILES=$(circleci tests glob "tests/enterprise/**/test_*.py")
-            echo "$TEST_FILES" | circleci tests run \
-              --verbose \
-              --command="tr ' ' '\\n' | awk '/\\.py/ {print; next} {sub(/\\.[A-Z][^.]*$/, \"\"); gsub(/\\./, \"/\"); print \$0 \".py\"}' | xargs uv run --no-sync python -m pytest \
-                -v -x \
-                --junitxml=test-results/junit-enterprise.xml \
-                --durations=10 \
-                -n 4"
+            echo "Skipping enterprise test suite in OSS-only fork"
           no_output_timeout: 15m
       # Store test results
       - store_test_results:

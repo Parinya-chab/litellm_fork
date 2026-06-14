@@ -3,7 +3,6 @@
 ## Tracks num active projects per minute
 
 import asyncio
-import os
 from typing import List, Optional, Tuple, Union
 
 import litellm
@@ -120,13 +119,9 @@ class _PROXY_DynamicRateLimitHandler(CustomLogger):
                     )
                 )
             elif priority is not None and litellm.priority_reservation is not None:
-                if os.getenv("LITELLM_LICENSE", None) is None:
-                    verbose_proxy_logger.error(
-                        "PREMIUM FEATURE: Reserving tpm/rpm by priority is a premium feature. Please add a 'LITELLM_LICENSE' to your .env to enable this.\nGet a license: https://docs.litellm.ai/docs/proxy/enterprise."
-                    )
-                else:
-                    value = litellm.priority_reservation[priority]
-                    weight = convert_priority_to_percent(value, model_group_info)
+                verbose_proxy_logger.error(
+                    "Priority-based tpm/rpm reservation is not available in this OSS-only LiteLLM fork."
+                )
 
             active_projects = await self.internal_usage_cache.async_get_cache(
                 model=model

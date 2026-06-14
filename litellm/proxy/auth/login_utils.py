@@ -333,11 +333,11 @@ def create_ui_token_object(
     Args:
         login_result: The result from authenticate_user
         general_settings: General proxy settings dictionary
-        premium_user: Whether premium features are enabled
 
     Returns:
         ReturnedUITokenObject: Token object ready for JWT encoding
     """
+    del premium_user
     disabled_non_admin_personal_key_creation = (
         get_disabled_non_admin_personal_key_creation()
     )
@@ -348,7 +348,6 @@ def create_ui_token_object(
         user_email=login_result.user_email,
         user_role=login_result.user_role,
         login_method=login_result.login_method,
-        premium_user=premium_user,
         auth_header_name=general_settings.get(
             "litellm_key_header_name", "Authorization"
         ),

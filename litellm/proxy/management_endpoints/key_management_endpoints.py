@@ -763,20 +763,6 @@ async def _common_key_generation_helper(  # noqa: PLR0915
             },
         )
 
-    # APPLY ENTERPRISE KEY MANAGEMENT PARAMS
-    try:
-        from litellm_enterprise.proxy.management_endpoints.key_management_endpoints import (
-            apply_enterprise_key_management_params,
-        )
-
-        data = apply_enterprise_key_management_params(data, team_table)
-    except Exception as e:
-        verbose_proxy_logger.debug(
-            "litellm.proxy.proxy_server.generate_key_fn(): Enterprise key management params not applied - {}".format(
-                str(e)
-            )
-        )
-
     # TODO: @ishaan-jaff: Migrate all budget tracking to use LiteLLM_BudgetTable
     _budget_id = data.budget_id
     if prisma_client is not None and data.soft_budget is not None:
@@ -3410,7 +3396,7 @@ def _check_model_access_group(
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail={
-                        "error": "Setting a model access group on a wildcard model is only available for LiteLLM Enterprise users.{}".format(
+                        "error": "Setting a model access group on a wildcard model is unsupported in this fork. {}".format(
                             CommonProxyErrors.not_premium_user.value
                         )
                     },
@@ -3645,7 +3631,7 @@ async def generate_key_helper_fn(  # noqa: PLR0915
                 and premium_user is not True
             ):
                 raise ValueError(
-                    "get_spend_routes permission is only available for LiteLLM Enterprise users"
+                    CommonProxyErrors.not_premium_user.value
                 )
 
             saved_token["permissions"] = json.loads(saved_token["permissions"])

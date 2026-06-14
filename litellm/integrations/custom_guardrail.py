@@ -49,6 +49,7 @@ from litellm.exceptions import (
     ModifyResponseException,
     SensitiveDataRouteException,
 )
+from litellm.proxy._types import CommonProxyErrors
 
 
 def get_session_id_from_request_data(request_data: Dict[str, Any]) -> Optional[str]:
@@ -570,19 +571,10 @@ class CustomGuardrail(CustomLogger):
         if self.default_on is True and disable_global_guardrail is not True:
             if self._event_hook_is_event_type(event_type):
                 if isinstance(self.event_hook, Mode):
-                    try:
-                        from litellm_enterprise.integrations.custom_guardrail import (
-                            EnterpriseCustomGuardrailHelper,
-                        )
-                    except ImportError:
-                        raise ImportError(
-                            "Setting tag-based guardrails is only available in litellm-enterprise. You must be a premium user to use this feature."
-                        )
-                    result = EnterpriseCustomGuardrailHelper._should_run_if_mode_by_tag(
-                        data, self.event_hook, event_type
+                    raise ValueError(
+                        "Tag-based guardrails are not available in this fork. "
+                        + CommonProxyErrors.not_premium_user.value
                     )
-                    if result is not None:
-                        return result
                 return True
             return False
 
@@ -597,19 +589,10 @@ class CustomGuardrail(CustomLogger):
             return False
 
         if isinstance(self.event_hook, Mode):
-            try:
-                from litellm_enterprise.integrations.custom_guardrail import (
-                    EnterpriseCustomGuardrailHelper,
-                )
-            except ImportError:
-                raise ImportError(
-                    "Setting tag-based guardrails is only available in litellm-enterprise. You must be a premium user to use this feature."
-                )
-            result = EnterpriseCustomGuardrailHelper._should_run_if_mode_by_tag(
-                data, self.event_hook, event_type
+            raise ValueError(
+                "Tag-based guardrails are not available in this fork. "
+                + CommonProxyErrors.not_premium_user.value
             )
-            if result is not None:
-                return result
         return True
 
     def _event_hook_is_event_type(self, event_type: GuardrailEventHooks) -> bool:

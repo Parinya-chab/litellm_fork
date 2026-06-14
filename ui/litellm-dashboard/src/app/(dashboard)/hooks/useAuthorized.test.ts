@@ -116,7 +116,6 @@ describe("useAuthorized", () => {
       user_id: "user-1",
       user_email: "user@example.com",
       user_role: "app_admin",
-      premium_user: true,
       disabled_non_admin_personal_key_creation: false,
       login_method: "username_password",
     };
@@ -137,7 +136,7 @@ describe("useAuthorized", () => {
     expect(result.current.userId).toBe("user-1");
     expect(result.current.userEmail).toBe("user@example.com");
     expect(result.current.userRole).toBe("Admin");
-    expect(result.current.premiumUser).toBe(true);
+    expect(result.current.premiumUser).toBe(false);
     expect(result.current.disabledPersonalKeyCreation).toBe(false);
     expect(result.current.showSSOBanner).toBe(true);
     expect(replaceMock).not.toHaveBeenCalled();
@@ -183,7 +182,6 @@ describe("useAuthorized", () => {
       user_id: "user-1",
       user_email: "user@example.com",
       user_role: "app_admin",
-      premium_user: true,
       disabled_non_admin_personal_key_creation: false,
       login_method: "username_password",
     };

@@ -175,42 +175,13 @@ from .specialty_caches.dynamic_logging_cache import DynamicLoggingCache
 
 if TYPE_CHECKING:
     from litellm.llms.base_llm.passthrough.transformation import BasePassthroughConfig
-try:
-    from litellm_enterprise.enterprise_callbacks.callback_controls import (
-        EnterpriseCallbackControls,
-    )
-    from litellm_enterprise.enterprise_callbacks.pagerduty.pagerduty import (
-        PagerDutyAlerting,
-    )
-    from litellm_enterprise.enterprise_callbacks.send_emails.resend_email import (
-        ResendEmailLogger,
-    )
-    from litellm_enterprise.enterprise_callbacks.send_emails.sendgrid_email import (
-        SendGridEmailLogger,
-    )
-    from litellm_enterprise.enterprise_callbacks.send_emails.smtp_email import (
-        SMTPEmailLogger,
-    )
-    from litellm_enterprise.litellm_core_utils.litellm_logging import (
-        StandardLoggingPayloadSetup as EnterpriseStandardLoggingPayloadSetup,
-    )
-
-    from litellm.integrations.generic_api.generic_api_callback import GenericAPILogger
-
-    EnterpriseStandardLoggingPayloadSetupVAR: Optional[
-        Type[EnterpriseStandardLoggingPayloadSetup]
-    ] = EnterpriseStandardLoggingPayloadSetup
-except Exception as e:
-    verbose_logger.debug(
-        f"[Non-Blocking] Unable to import GenericAPILogger - LiteLLM Enterprise Feature - {str(e)}"
-    )
-    GenericAPILogger = CustomLogger  # type: ignore
-    ResendEmailLogger = CustomLogger  # type: ignore
-    SendGridEmailLogger = CustomLogger  # type: ignore
-    SMTPEmailLogger = CustomLogger  # type: ignore
-    PagerDutyAlerting = CustomLogger  # type: ignore
-    EnterpriseCallbackControls = None  # type: ignore
-    EnterpriseStandardLoggingPayloadSetupVAR = None
+GenericAPILogger = CustomLogger  # type: ignore
+ResendEmailLogger = CustomLogger  # type: ignore
+SendGridEmailLogger = CustomLogger  # type: ignore
+SMTPEmailLogger = CustomLogger  # type: ignore
+PagerDutyAlerting = CustomLogger  # type: ignore
+EnterpriseCallbackControls = None  # type: ignore
+EnterpriseStandardLoggingPayloadSetupVAR = None
 _in_memory_loggers: List[Any] = []
 
 _STANDARD_LOGGING_METADATA_KEYS: frozenset = frozenset(

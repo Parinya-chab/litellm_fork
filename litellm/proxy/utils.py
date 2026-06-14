@@ -48,24 +48,10 @@ from litellm.proxy.spend_tracking.spend_log_error_logger import spend_log_error
 from litellm.types.guardrails import GuardrailEventHooks
 from litellm.types.utils import CallTypes, CallTypesLiteral
 
-try:
-    from litellm_enterprise.enterprise_callbacks.send_emails.base_email import (
-        BaseEmailLogger,
-    )
-    from litellm_enterprise.enterprise_callbacks.send_emails.resend_email import (
-        ResendEmailLogger,
-    )
-    from litellm_enterprise.enterprise_callbacks.send_emails.sendgrid_email import (
-        SendGridEmailLogger,
-    )
-    from litellm_enterprise.enterprise_callbacks.send_emails.smtp_email import (
-        SMTPEmailLogger,
-    )
-except ImportError:
-    BaseEmailLogger = None  # type: ignore
-    SendGridEmailLogger = None  # type: ignore
-    SMTPEmailLogger = None  # type: ignore
-    ResendEmailLogger = None  # type: ignore
+BaseEmailLogger = None  # type: ignore
+SendGridEmailLogger = None  # type: ignore
+SMTPEmailLogger = None  # type: ignore
+ResendEmailLogger = None  # type: ignore
 
 try:
     import backoff
@@ -6028,9 +6014,9 @@ def _premium_user_check(feature: Optional[str] = None):
     from litellm.proxy.proxy_server import premium_user
 
     if feature:
-        detail_msg = f"This feature is only available for LiteLLM Enterprise users: {feature}. {CommonProxyErrors.not_premium_user.value}"
+        detail_msg = f"{feature}. {CommonProxyErrors.not_premium_user.value}"
     else:
-        detail_msg = f"This feature is only available for LiteLLM Enterprise users. {CommonProxyErrors.not_premium_user.value}"
+        detail_msg = CommonProxyErrors.not_premium_user.value
 
     if not premium_user:
         raise HTTPException(

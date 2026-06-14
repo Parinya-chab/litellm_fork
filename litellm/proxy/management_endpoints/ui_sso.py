@@ -836,7 +836,6 @@ async def google_login(
     Example:
     """
     from litellm.proxy.proxy_server import (
-        premium_user,
         prisma_client,
         user_api_key_cache,
         user_custom_ui_sso_sign_in_handler,
@@ -852,31 +851,6 @@ async def google_login(
         is_disabled = str_to_bool(value=_disable_ui_flag)
         if is_disabled:
             return admin_ui_disabled()
-
-    ####### Check if user is a Enterprise / Premium User #######
-    if (
-        microsoft_client_id is not None
-        or google_client_id is not None
-        or generic_client_id is not None
-    ):
-        if premium_user is not True:
-            # Check if under 'free SSO user' limit
-            if prisma_client is not None:
-                total_users = await UserRepository(prisma_client).table.count()
-                if total_users and total_users > 5:
-                    raise ProxyException(
-                        message="You must be a LiteLLM Enterprise user to use SSO for more than 5 users. If you have a license please set `LITELLM_LICENSE` in your env. If you want to obtain a license meet with us here: https://enterprise.litellm.ai/demo You are seeing this error message because You set one of `MICROSOFT_CLIENT_ID`, `GOOGLE_CLIENT_ID`, or `GENERIC_CLIENT_ID` in your env. Please unset this",
-                        type=ProxyErrorTypes.auth_error,
-                        param="premium_user",
-                        code=status.HTTP_403_FORBIDDEN,
-                    )
-            else:
-                raise ProxyException(
-                    message=CommonProxyErrors.db_not_connected_error.value,
-                    type=ProxyErrorTypes.auth_error,
-                    param="premium_user",
-                    code=status.HTTP_403_FORBIDDEN,
-                )
 
     ####### Detect DB + MASTER KEY in .env #######
     missing_env_vars = show_missing_vars_in_env()
@@ -901,18 +875,9 @@ async def google_login(
 
     # check if user defined a custom auth sso sign in handler, if yes, use it
     if user_custom_ui_sso_sign_in_handler is not None:
-        try:
-            from litellm_enterprise.proxy.auth.custom_sso_handler import (  # type: ignore[import-untyped]
-                EnterpriseCustomSSOHandler,
-            )
-
-            return await EnterpriseCustomSSOHandler.handle_custom_ui_sso_sign_in(
-                request=request,
-            )
-        except ImportError:
-            raise ValueError(
-                "Enterprise features are not available. Custom UI SSO sign-in requires LiteLLM Enterprise."
-            )
+        raise ValueError(
+            "Custom UI SSO sign-in is not available in this OSS-only LiteLLM fork."
+        )
 
     # Check if we should use SSO handler
     if (
@@ -3161,7 +3126,6 @@ class SSOAuthenticationHandler:
             general_settings,
             generate_key_helper_fn,
             master_key,
-            premium_user,
             proxy_logging_obj,
             redis_usage_cache,
             user_api_key_cache,
@@ -3332,7 +3296,6 @@ class SSOAuthenticationHandler:
             user_email=user_email,
             user_role=user_role or LitellmUserRoles.INTERNAL_USER_VIEW_ONLY.value,
             login_method="sso",
-            premium_user=premium_user,
             auth_header_name=general_settings.get(
                 "litellm_key_header_name", "Authorization"
             ),
@@ -4350,25 +4313,9 @@ async def debug_sso_login(request: Request):
     PROXY_BASE_URL should be the your deployed proxy endpoint, e.g. PROXY_BASE_URL="https://litellm-production-7002.up.railway.app/"
     Example:
     """
-    from litellm.proxy.proxy_server import premium_user
-
     microsoft_client_id = os.getenv("MICROSOFT_CLIENT_ID", None)
     google_client_id = os.getenv("GOOGLE_CLIENT_ID", None)
     generic_client_id = os.getenv("GENERIC_CLIENT_ID", None)
-
-    ####### Check if user is a Enterprise / Premium User #######
-    if (
-        microsoft_client_id is not None
-        or google_client_id is not None
-        or generic_client_id is not None
-    ):
-        if premium_user is not True:
-            raise ProxyException(
-                message="You must be a LiteLLM Enterprise user to use SSO. If you have a license please set `LITELLM_LICENSE` in your env. If you want to obtain a license meet with us here: https://enterprise.litellm.ai/demo You are seeing this error message because You set one of `MICROSOFT_CLIENT_ID`, `GOOGLE_CLIENT_ID`, or `GENERIC_CLIENT_ID` in your env. Please unset this",
-                type=ProxyErrorTypes.auth_error,
-                param="premium_user",
-                code=status.HTTP_403_FORBIDDEN,
-            )
 
     # get url from request
     redirect_url = SSOAuthenticationHandler.get_redirect_url_for_sso(

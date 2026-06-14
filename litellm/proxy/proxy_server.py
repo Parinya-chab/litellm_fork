@@ -73,7 +73,6 @@ from litellm.proxy._types import (
     ConfigGeneralSettings,
     ConfigList,
     ConfigYAML,
-    EnterpriseLicenseData,
     FieldDetail,
     InvitationClaim,
     InvitationDelete,
@@ -261,7 +260,6 @@ from litellm.proxy.auth.auth_utils import (
     is_request_body_safe,
 )
 from litellm.proxy.auth.handle_jwt import JWTHandler
-from litellm.proxy.auth.litellm_license import LicenseCheck
 from litellm.proxy.auth.model_checks import (
     get_all_fallbacks,
     get_complete_model_list,
@@ -583,36 +581,8 @@ from fastapi.staticfiles import StaticFiles
 
 from litellm.types.agents import AgentConfig
 
-# import enterprise folder
-enterprise_router = APIRouter()
-try:
-    # when using litellm cli
-    import litellm.proxy.enterprise as enterprise
-except Exception:
-    # when using litellm docker image
-    try:
-        import enterprise  # type: ignore
-    except Exception:
-        pass
-
-###################
-# Import enterprise routes
-try:
-    from litellm_enterprise.proxy.enterprise_routes import router as _enterprise_router
-    from litellm_enterprise.proxy.proxy_server import EnterpriseProxyConfig
-
-    enterprise_router = _enterprise_router
-    enterprise_proxy_config: Optional[EnterpriseProxyConfig] = EnterpriseProxyConfig()
-except ImportError:
-    enterprise_proxy_config = None
-###################
-
 server_root_path = get_server_root_path()
-_license_check = LicenseCheck()
-premium_user: bool = _license_check.is_premium()
-premium_user_data: Optional["EnterpriseLicenseData"] = (
-    _license_check.airgapped_license_data
-)
+premium_user: bool = False
 global_max_parallel_request_retries_env: Optional[str] = os.getenv(
     "LITELLM_GLOBAL_MAX_PARALLEL_REQUEST_RETRIES"
 )
@@ -641,17 +611,9 @@ ui_message += "\n\n💸 [```LiteLLM Model Cost Map```](https://models.litellm.ai
 
 ui_message += f"\n\n🔎 [```LiteLLM Model Hub```]({model_hub_link}). See available models on the proxy. [**Docs**](https://docs.litellm.ai/docs/proxy/ai_hub)"
 
-custom_swagger_message = "[**Customize Swagger Docs**](https://docs.litellm.ai/docs/proxy/enterprise#swagger-docs---custom-routes--branding)"
-
-### CUSTOM BRANDING [ENTERPRISE FEATURE] ###
-_title = os.getenv("DOCS_TITLE", "LiteLLM API") if premium_user else "LiteLLM API"
+_title = "LiteLLM API"
 _description = (
-    os.getenv(
-        "DOCS_DESCRIPTION",
-        f"Enterprise Edition \n\nProxy Server to call 100+ LLMs in the OpenAI format. {custom_swagger_message}\n\n{ui_message}",
-    )
-    if premium_user
-    else f"Proxy Server to call 100+ LLMs in the OpenAI format. {custom_swagger_message}\n\n{ui_message}"
+    "Proxy Server to call 100+ LLMs in the OpenAI format.\n\n" + ui_message
 )
 
 
@@ -746,7 +708,7 @@ async def _initialize_shared_aiohttp_session():
 
 @asynccontextmanager
 async def proxy_startup_event(app: FastAPI):  # noqa: PLR0915
-    global prisma_client, master_key, use_background_health_checks, llm_router, llm_model_list, general_settings, proxy_budget_rescheduler_min_time, proxy_budget_rescheduler_max_time, litellm_proxy_admin_name, db_writer_client, store_model_in_db, premium_user, _license_check, proxy_batch_polling_interval, shared_aiohttp_session
+    global prisma_client, master_key, use_background_health_checks, llm_router, llm_model_list, general_settings, proxy_budget_rescheduler_min_time, proxy_budget_rescheduler_max_time, litellm_proxy_admin_name, db_writer_client, store_model_in_db, premium_user, proxy_batch_polling_interval, shared_aiohttp_session
     import json
 
     init_verbose_loggers()
@@ -778,15 +740,6 @@ async def proxy_startup_event(app: FastAPI):  # noqa: PLR0915
                     "Worker startup hook '%s' failed: %s", _hook_spec, e
                 )
                 raise
-
-    ## CHECK PREMIUM USER
-    verbose_proxy_logger.debug(
-        "litellm.proxy.proxy_server.py::startup() - CHECKING PREMIUM USER - {}".format(
-            premium_user
-        )
-    )
-    if premium_user is False:
-        premium_user = _license_check.is_premium()
 
     ## CHECK MASTER KEY IN ENVIRONMENT ##
     master_key = get_secret_str("LITELLM_MASTER_KEY")
@@ -3860,7 +3813,6 @@ class ProxyConfig:
 
     def _load_environment_variables(self, config: dict):
         ## ENVIRONMENT VARIABLES
-        global premium_user
         environment_variables = config.get("environment_variables", None)
         if environment_variables:
             for key, value in environment_variables.items():
@@ -3891,11 +3843,6 @@ class ProxyConfig:
                     # ```
                     #########################################################
                     os.environ[key] = str(value)
-
-            # check if litellm_license in general_settings
-            if "LITELLM_LICENSE" in environment_variables:
-                _license_check.license_str = os.getenv("LITELLM_LICENSE", None)
-                premium_user = _license_check.is_premium()
         return
 
     async def load_config(  # noqa: PLR0915
@@ -4408,7 +4355,7 @@ class ProxyConfig:
             allowed_ips = general_settings.get("allowed_ips", None)
             if allowed_ips is not None and premium_user is False:
                 raise ValueError(
-                    "allowed_ips is an Enterprise Feature. Please add a valid LITELLM_LICENSE to your envionment."
+                    "allowed_ips is not available in this OSS-only LiteLLM fork."
                 )
             ## BUDGET RESCHEDULER ##
             proxy_budget_rescheduler_min_time = general_settings.get(
@@ -4495,11 +4442,6 @@ class ProxyConfig:
                     "Trying to use `enforced_params`"
                     + CommonProxyErrors.not_premium_user.value
                 )
-
-            # check if litellm_license in general_settings
-            if "litellm_license" in general_settings:
-                _license_check.license_str = general_settings["litellm_license"]
-                premium_user = _license_check.is_premium()
 
         router_params: dict = {
             "cache_responses": litellm.cache
@@ -7701,69 +7643,15 @@ class ProxyStartupEvent:
                     )
         ### CHECK BATCH COST ###
         if llm_router is not None and PROXY_BATCH_POLLING_ENABLED:
-            try:
-                from litellm_enterprise.proxy.common_utils.check_batch_cost import (
-                    CheckBatchCost,
-                )
-
-                check_batch_cost_job = CheckBatchCost(
-                    proxy_logging_obj=proxy_logging_obj,
-                    prisma_client=prisma_client,
-                    llm_router=llm_router,
-                )
-                scheduler.add_job(
-                    check_batch_cost_job.check_batch_cost,
-                    "interval",
-                    seconds=proxy_batch_polling_interval
-                    + random.randint(0, 30),  # Add small random offset
-                    # REMOVED jitter parameter - major cause of memory leak
-                    id="check_batch_cost_job",
-                    replace_existing=True,
-                    misfire_grace_time=APSCHEDULER_MISFIRE_GRACE_TIME,
-                )
-                verbose_proxy_logger.info("Batch cost check job scheduled successfully")
-
-            except Exception as e:
-                verbose_proxy_logger.debug(f"Failed to setup batch cost checking: {e}")
-                verbose_proxy_logger.debug(
-                    "Checking batch cost for LiteLLM Managed Files is an Enterprise Feature. Skipping..."
-                )
-                pass
+            verbose_proxy_logger.debug(
+                "Skipping enterprise-only batch cost polling in OSS-only fork"
+            )
 
         ### CHECK RESPONSES COST ###
         if llm_router is not None and PROXY_BATCH_POLLING_ENABLED:
-            try:
-                from litellm_enterprise.proxy.common_utils.check_responses_cost import (
-                    CheckResponsesCost,
-                )
-
-                check_responses_cost_job = CheckResponsesCost(
-                    proxy_logging_obj=proxy_logging_obj,
-                    prisma_client=prisma_client,
-                    llm_router=llm_router,
-                )
-                scheduler.add_job(
-                    check_responses_cost_job.check_responses_cost,
-                    "interval",
-                    seconds=proxy_batch_polling_interval
-                    + random.randint(0, 30),  # Add small random offset
-                    # REMOVED jitter parameter - major cause of memory leak
-                    id="check_responses_cost_job",
-                    replace_existing=True,
-                    misfire_grace_time=APSCHEDULER_MISFIRE_GRACE_TIME,
-                )
-                verbose_proxy_logger.info(
-                    "Responses cost check job scheduled successfully"
-                )
-
-            except Exception as e:
-                verbose_proxy_logger.debug(
-                    f"Failed to setup responses cost checking: {e}"
-                )
-                verbose_proxy_logger.debug(
-                    "Checking responses cost for LiteLLM Managed Files is an Enterprise Feature. Skipping..."
-                )
-                pass
+            verbose_proxy_logger.debug(
+                "Skipping enterprise-only responses cost polling in OSS-only fork"
+            )
 
         # MEMORY LEAK FIX: Start scheduler with paused=False to avoid backlog processing
         # Do NOT reset job times to "now" as this can trigger the memory leak
@@ -13738,7 +13626,6 @@ async def onboarding(invite_link: str, request: Request):
         user_email=user_obj.user_email,
         user_role=user_obj.user_role,
         login_method="username_password",
-        premium_user=premium_user,
         auth_header_name=general_settings.get(
             "litellm_key_header_name", "Authorization"
         ),
@@ -13853,7 +13740,6 @@ async def _generate_onboarding_ui_session_token(user_obj: Any) -> str:
         user_email=user_obj.user_email,
         user_role=user_obj.user_role,
         login_method="username_password",
-        premium_user=premium_user,
         auth_header_name=general_settings.get(
             "litellm_key_header_name", "Authorization"
         ),
@@ -16023,7 +15909,6 @@ app.include_router(router_settings_router)
 app.include_router(fallback_management_router)
 app.include_router(cache_settings_router)
 app.include_router(user_agent_analytics_router)
-app.include_router(enterprise_router)
 app.include_router(ui_discovery_endpoints_router)
 # Eager: /models/{name}:method overlaps with the OpenAI /models endpoint.
 app.include_router(google_router)

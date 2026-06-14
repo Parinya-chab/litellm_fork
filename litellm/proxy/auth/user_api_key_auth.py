@@ -83,15 +83,7 @@ from litellm.repositories.table_repositories import TeamMembershipRepository
 from litellm.secret_managers.main import get_secret_bool
 from litellm.types.services import ServiceTypes
 
-try:
-    from litellm_enterprise.proxy.auth.user_api_key_auth import (
-        enterprise_custom_auth as _enterprise_custom_auth,
-    )
-
-    enterprise_custom_auth: Optional[Callable] = _enterprise_custom_auth
-except ImportError as e:
-    verbose_proxy_logger.debug(f"Error in enterprise custom auth: {e}")
-    enterprise_custom_auth = None
+enterprise_custom_auth: Optional[Callable] = None
 
 user_api_key_service_logger_obj = ServiceLogging()  # used for tracking latency on OTEL
 
